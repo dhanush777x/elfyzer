@@ -1,37 +1,61 @@
 <div align="center">
   <img src="assets/elfyzer_logo.png" alt="elfyzer logo" width="200"/>
   <h1>elfyzer</h1>
-  <p><b>An interactive platform to analyze, visualize, and compare embedded ELF binaries and their memory layout.</b></p>
+  <p><b>Understand your firmware memory layout in seconds - without digging through thousands of lines of linker map files.</b></p>
 </div>
 
-<div align="center">
-elfyzer presents an address-space-centric view of firmware memory. It derives all statistics purely from standard ELF metadata: section headers, program headers, symbol tables, and DWARF debug info. No heuristics, no region guessing.
-</div>
 <br>
+
 <div align="center">
-  <img src="assets/elfyzer_dashboard.png" alt="elfyzer dashboard preview" width="800"/>
+  <a href="https://www.youtube.com/watch?v=L1PB6mWUTYo" target="_blank">
+    <img src="assets/elfyzer_demo.gif" alt="elfyzer demo" width="800"/>
+  </a>
+  <br>
+  <i>Click the preview above to watch the full demo video on YouTube →</i>
 </div>
+
+## The problem
+
+#### Why elfyzer exists
+
+When developing memory-constrained embedded and Edge AI systems, understanding firmware memory usage shouldn't require digging through thousands of lines of linker map files.
+
+When firmware no longer fits in Flash or SRAM, engineers are often left manually correlating sections, symbols, addresses, object files, linker scripts, and DWARF debug information just to answer simple questions: **What grew? Which symbol consumed the most memory? Where did it come from?**
+
+I built **elfyzer** after repeatedly running into this workflow. Instead of piecing together information across multiple tools, I wanted a single place to explore the firmware's memory layout and answer those questions in seconds.
+
+## The solution
+
+**elfyzer** transforms standard ELF metadata into an interactive view of your firmware, automatically correlating address spaces, program segments, sections, symbols, object files, source files, and DWARF attribution.
+
+Everything is derived directly from the ELF using section headers, program headers, symbol tables, and DWARF debug information - **no heuristics, no guessed memory regions, and no custom linker annotations.**
+
+Whether you're investigating a linker overflow, tracking firmware growth, or comparing two builds, elfyzer helps you understand the relationships immediately.
 
 ## Features
 
 **Address Space Visualization** - ELF segments are merged into contiguous address space cards. Each card shows the section timeline with VMA gaps, per-section symbol lists, and memory map treemap/sunburst charts.
 
+**Memory Map Charts** - Interactive ECharts treemap and sunburst visualizations of address space usage.
+
+**Binary Diff** - Compare two ELF builds side-by-side. Detects new, removed, and changed symbols with size deltas. Drill down by symbols, sections, source files, or object files.
+
 **Three-Phase DWARF Attribution** - Symbols are attributed to source files through DIE exact matching, `.debug_line` address correlation, and CU range fallback. Each symbol has an attribution confidence level (`exact`, `inferred`, `unknown`).
+
+**Symbol Table** - Paginated, searchable, sortable (name/section/type/size/address), with type filtering and CSV/JSON export.
 
 **Section Categorization** - Allocatable sections are split into three mutually exclusive views by their ELF flags:
 - **Writable** (`W`) - data sections
 - **Read-Only** - alloc sections with neither `W` nor `X`
 - **Executable** (`X`) - code sections
 
-**Symbol Table** - Paginated, searchable, sortable (name/section/type/size/address), with type filtering and CSV/JSON export.
-
-**Binary Diff** - Compare two ELF builds side-by-side. Detects new, removed, and changed symbols with size deltas. Drill down by symbols, sections, source files, or object files.
-
 **Program Segments** - PT_LOAD and other segment types with expandable detail showing mapped sections and largest symbols.
 
 **Copy / Zero / XIP Detection** - Sections where VMA ≠ LMA are flagged as loaded (copy). NOBITS sections are zeroed (BSS). Sections with VMA == LMA and non-zero file size are in-place (XIP).
 
-**Memory Map Charts** - Interactive ECharts treemap and sunburst visualizations of address space usage.
+> **Note**
+>
+> elfyzer was built to complement existing ELF tooling, not replace it. Tools such as `readelf`, `nm`, `objdump`, and linker map files are excellent at exposing raw binary information. elfyzer focuses on correlating that information into an interactive view that helps answer firmware memory questions more quickly.
 
 ---
 
@@ -82,7 +106,7 @@ The dashboard opens at `http://127.0.0.1:8000`.
 
 ---
 
-## Architecture
+## Project Structure
 
 ```
 elfyzer/
@@ -134,7 +158,7 @@ All upload endpoints reject files larger than 500 MB and validate both magic byt
 - Python 3.9+
 - `fastapi`, `uvicorn`, `pyelftools`, `python-multipart`
 - Optional: `cxxfilt` for C++ symbol demangling
-- A browser (tested on Brave)
+- A Modern Web Browser
 - No JavaScript build step - the frontend is vanilla JS loaded directly from static files.
 
 ---
