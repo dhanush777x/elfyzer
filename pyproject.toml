@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "elfyzer"
-version = "0.1.0"
+version = "0.2.0"
 description = "Firmware Memory Analysis Platform"
 readme = "README.md"
 license = {text = "MIT"}
@@ -19,8 +19,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Embedded Systems",
@@ -31,11 +29,9 @@ dependencies = [
     "uvicorn>=0.20",
     "pyelftools>=0.29",
     "python-multipart",
+    "pycxxfilt",
 ]
-requires-python = ">=3.9"
-
-[project.optional-dependencies]
-demangle = ["cxxfilt"]
+requires-python = ">=3.11"
 
 [project.urls]
 Homepage = "https://github.com/dhanush777x/elfyzer.git"

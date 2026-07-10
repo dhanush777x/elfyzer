@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/elfyzer_logo.png" alt="elfyzer logo" width="200"/>
+  <img src="src/elfyzer/static/assets/elfyzer_logo.png" alt="elfyzer logo" width="200"/>
   <h1>elfyzer</h1>
   <p><b>Understand your firmware memory layout in seconds - without digging through thousands of lines of linker map files.</b></p>
 </div>
@@ -8,7 +8,7 @@
 
 <div align="center">
   <a href="https://www.youtube.com/watch?v=L1PB6mWUTYo" target="_blank">
-    <img src="assets/elfyzer_demo.gif" alt="elfyzer demo" width="800"/>
+    <img src="src/elfyzer/static/assets/elfyzer_demo.gif" alt="elfyzer demo" width="800"/>
   </a>
   <br>
   <i>Click the preview above to watch the full demo video on YouTube →</i>
@@ -68,10 +68,10 @@ git clone https://github.com/dhanush777x/elfyzer.git
 cd elfyzer
 pip install .
 # or with C++ symbol demangling:
-pip install ".[demangle]"
+pip install .
 ```
 
-The `elfyzer` command is then available on your PATH. For an editable install (source changes take effect immediately), use `pip install -e .` instead.
+The `elfyzer` command is then available on your PATH. C++ symbol demangling (via `pycxxfilt`) is included by default. For an editable install (source changes take effect immediately), use `pip install -e .` instead.
 
 ### Usage
 
@@ -157,7 +157,7 @@ All upload endpoints reject files larger than 500 MB and validate both magic byt
 
 - Python 3.9+
 - `fastapi`, `uvicorn`, `pyelftools`, `python-multipart`
-- Optional: `cxxfilt` for C++ symbol demangling
+- `pycxxfilt` for C++ symbol demangling (included by default)
 - A Modern Web Browser
 - No JavaScript build step - the frontend is vanilla JS loaded directly from static files.
 
@@ -190,7 +190,7 @@ To set up a development environment:
 ```bash
 git clone https://github.com/dhanush777x/elfyzer.git
 cd elfyzer
-pip install -e ".[demangle]"
+pip install -e .
 ```
 
 ---

@@ -33,7 +33,7 @@ HOST = "127.0.0.1"
 PORT = 8000
 URL = f"http://{HOST}:{PORT}"
 MAX_UPLOAD_SIZE = 500 * 1024 * 1024
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 
 BANNER = f"elfyzer v{VERSION} - Firmware Memory Analysis Platform\nDashboard: {
     URL}"
@@ -51,10 +51,6 @@ app = FastAPI(title="elfyzer", version=VERSION)
 static_dir = Path(__file__).parent / "static"
 if static_dir.is_dir():
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
-
-assets_dir = Path(__file__).parent.parent.parent / "assets"
-if assets_dir.is_dir():
-    app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
 
 @app.get("/health")

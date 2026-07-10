@@ -25,19 +25,18 @@ ARCH_MAP = {
     'EM_MSP430':  'MSP430',
 }
 
-HAVE_CXXFILT = False
 try:
-    import cxxfilt
-    HAVE_CXXFILT = True
+    import pycxxfilt
 except ImportError:
-    pass
+    pycxxfilt = None
 
 
 def _demangle(name: str) -> str:
-    if not HAVE_CXXFILT or not name:
+    if not pycxxfilt or not name:
         return name
     try:
-        return cxxfilt.demangle(name)
+        result = pycxxfilt.demangle(name)
+        return result if result else name
     except Exception:
         return name
 
