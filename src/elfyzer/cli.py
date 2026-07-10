@@ -8,15 +8,14 @@ import threading
 from urllib.parse import quote
 import logging
 
-logging.basicConfig(
-    level=logging.WARNING,
-    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-)
-
 __all__ = ["main"]
 
 
 def main():
+    logging.basicConfig(
+        level=logging.WARNING,
+        format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    )
     parser = argparse.ArgumentParser(
         prog="elfyzer",
         description="Firmware Memory Analysis Platform",

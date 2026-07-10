@@ -53,7 +53,7 @@ Whether you're investigating a linker overflow, tracking firmware growth, or com
 
 **Copy / Zero / XIP Detection** - Sections where VMA ≠ LMA are flagged as loaded (copy). NOBITS sections are zeroed (BSS). Sections with VMA == LMA and non-zero file size are in-place (XIP).
 
-> **Note**
+> [!Note]
 >
 > elfyzer was built to complement existing ELF tooling, not replace it. Tools such as `readelf`, `nm`, `objdump`, and linker map files are excellent at exposing raw binary information. elfyzer focuses on correlating that information into an interactive view that helps answer firmware memory questions more quickly.
 
@@ -177,6 +177,7 @@ The server runs on `127.0.0.1:8000`. Static file changes (JS, CSS, HTML) require
 - DWARF attribution depends on debug info being present in the ELF (compile with `-g`).
 - Section-level diff uses name-based matching (sections must have the same name across builds).
 - Symbol-level diff uses demangled name aggregation - symbols with identical demangled names are grouped, and their sizes are summed before comparison.
+- Tested with GCC and the LLVM-based Clang compiler. Other toolchains (e.g., IAR, ARMCC) may produce unexpected results.
 
 ---
 

@@ -27,9 +27,9 @@ classifiers = [
     "Topic :: System :: Operating System",
 ]
 dependencies = [
-    "fastapi",
+    "fastapi>=0.100.0",
     "uvicorn>=0.20",
-    "pyelftools",
+    "pyelftools>=0.29",
     "python-multipart",
 ]
 requires-python = ">=3.9"
