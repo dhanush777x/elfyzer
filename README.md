@@ -67,11 +67,9 @@ Whether you're investigating a linker overflow, tracking firmware growth, or com
 git clone https://github.com/dhanush777x/elfyzer.git
 cd elfyzer
 pip install .
-# or with C++ symbol demangling:
-pip install .
 ```
 
-The `elfyzer` command is then available on your PATH. C++ symbol demangling (via `pycxxfilt`) is included by default. For an editable install (source changes take effect immediately), use `pip install -e .` instead.
+The `elfyzer` command is then available on your PATH. C++ symbol demangling (via `pycxxfilt`) is included by default (see [Limitations](#limitations) for Windows compatibility). For an editable install (source changes take effect immediately), use `pip install -e .` instead.
 
 ### Usage
 
@@ -109,25 +107,29 @@ The dashboard opens at `http://127.0.0.1:8000`.
 ## Project Structure
 
 ```
-elfyzer/
-├── cli.py              # CLI entry point (argparse)
-├── server.py           # FastAPI application, upload/diff endpoints, preload
-├── extractor.py        # ElfExtractor - raw ELF parsing via pyelftools
-├── analysis.py         # AnalysisEngine - attribution, categorization, aggregation
-├── diff_engine.py      # DiffEngine - symbol/section/source/object comparison
-├── models.py           # Dataclasses: SymbolRecord, SectionRecord, etc.
-├── utils.py            # Architecture map, demangling, flag formatting
-├── static/
-│   ├── styles.css      # Glassmorphic dark theme design system
-│   └── js/
-│       ├── state.js    # Global state, view switching, error boundary
-│       ├── views.js    # All render functions (overview, symbols, sections, etc.)
-│       ├── diff.js     # Diff upload, rendering, filtering
-│       ├── chart.js    # ECharts treemap/sunburst
-│       ├── main.js     # DOM event delegation
-│       └── helpers.js  # fmtB, escapeHtml, debounce, type badge
-└── templates/
-    └── index.html      # Single-page application shell
+src/
+└── elfyzer/
+    ├── __init__.py
+    ├── __main__.py
+    ├── cli.py              # CLI entry point (argparse)
+    ├── server.py           # FastAPI application, upload/diff endpoints, preload
+    ├── extractor.py        # ElfExtractor - raw ELF parsing via pyelftools
+    ├── analysis.py         # AnalysisEngine - attribution, categorization, aggregation
+    ├── diff_engine.py      # DiffEngine - symbol/section/source/object comparison
+    ├── models.py           # Dataclasses: SymbolRecord, SectionRecord, etc.
+    ├── utils.py            # Architecture map, demangling, flag formatting
+    ├── static/
+    │   ├── assets/         # Static assets (logos, images)
+    │   ├── styles.css      # Glassmorphic dark theme design system
+    │   └── js/
+    │       ├── state.js    # Global state, view switching, error boundary
+    │       ├── views.js    # All render functions (overview, symbols, sections, etc.)
+    │       ├── diff.js     # Diff upload, rendering, filtering
+    │       ├── chart.js    # ECharts treemap/sunburst
+    │       ├── main.js     # DOM event delegation
+    │       └── helpers.js  # fmtB, escapeHtml, debounce, type badge
+    └── templates/
+        └── index.html      # Single-page application shell
 ```
 
 ### Attribution Pipeline
@@ -157,7 +159,7 @@ All upload endpoints reject files larger than 500 MB and validate both magic byt
 
 - Python 3.9+
 - `fastapi`, `uvicorn`, `pyelftools`, `python-multipart`
-- `pycxxfilt` for C++ symbol demangling (included by default)
+- `pycxxfilt` for C++ symbol demangling (included by default; see [Limitations](#limitations))
 - A Modern Web Browser
 - No JavaScript build step - the frontend is vanilla JS loaded directly from static files.
 
@@ -178,6 +180,7 @@ The server runs on `127.0.0.1:8000`. Static file changes (JS, CSS, HTML) require
 - Section-level diff uses name-based matching (sections must have the same name across builds).
 - Symbol-level diff uses demangled name aggregation - symbols with identical demangled names are grouped, and their sizes are summed before comparison.
 - Tested with GCC and the LLVM-based Clang compiler. Other toolchains (e.g., IAR, ARMCC) may produce unexpected results.
+- C++ symbol demangling relies on `pycxxfilt`. If its native extension cannot be loaded on Windows (for example, due to a DLL load failure), elfyzer silently falls back to displaying the original mangled symbol names.
 
 ---
 
