@@ -119,13 +119,16 @@ src/
     ├── models.py           # Dataclasses: SymbolRecord, SectionRecord, etc.
     ├── utils.py            # Architecture map, demangling, flag formatting
     ├── static/
-    │   ├── assets/         # Static assets (logos, images)
+    │   ├── assets/         # Logos and images
+    │   ├── fonts/          # Self-hosted WOFF2 font files
+    │   ├── fonts.css       # Local @font-face declarations
     │   ├── styles.css      # Glassmorphic dark theme design system
     │   └── js/
     │       ├── state.js    # Global state, view switching, error boundary
     │       ├── views.js    # All render functions (overview, symbols, sections, etc.)
     │       ├── diff.js     # Diff upload, rendering, filtering
     │       ├── chart.js    # ECharts treemap/sunburst
+    │       ├── echarts.min.js  # Vendored ECharts (replaces CDN)
     │       ├── main.js     # DOM event delegation
     │       └── helpers.js  # fmtB, escapeHtml, debounce, type badge
     └── templates/
