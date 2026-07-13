@@ -27,7 +27,7 @@ const SEC_COLORS = [
 ];
 function asColor(i) { return AS_COLORS[i % AS_COLORS.length]; }
 function secColor(i) { return SEC_COLORS[i % SEC_COLORS.length]; }
-const VIEWS = ['overview','symbols','writable','readonly','executable','sources','objects','segments','diff','diff-upload'];
+const VIEWS = ['overview','symbols','writable','readonly','executable','sources','objects','segments','report','diff','diff-upload'];
 
 function initApp(filename) {
   const s = D.summary;
@@ -158,6 +158,7 @@ function showView(viewName) {
       case 'sources':        renderSources(); break;
       case 'objects':        renderObjects(); break;
       case 'segments':       renderSegments(); break;
+      case 'report':         renderReportView(); break;
     }
   } catch(e) {
     console.error('Render error:', e);

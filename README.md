@@ -38,6 +38,8 @@ Whether you're investigating a linker overflow, tracking firmware growth, or com
 
 **Memory Map Charts** - Interactive ECharts treemap and sunburst visualizations of address space usage.
 
+**Memory Profile Report** - Define custom memory regions (Flash, SRAM, etc.) and generate a Markdown report with per-region section usage, free space, and top symbols by size. Import/export region definitions as JSON.
+
 **Binary Diff** - Compare two ELF builds side-by-side. Detects new, removed, and changed symbols with size deltas. Drill down by symbols, sections, source files, or object files.
 
 **Three-Phase DWARF Attribution** - Symbols are attributed to source files through DIE exact matching, `.debug_line` address correlation, and CU range fallback. Each symbol has an attribution confidence level (`exact`, `inferred`, `unknown`).
@@ -100,7 +102,21 @@ The dashboard opens at `http://127.0.0.1:8000`.
 | **Source Files** | DWARF-based source-level symbol attribution |
 | **Object Files** | Object file attribution derived from source paths |
 | **Segments** | Program header table with expandable detail |
+| **Report** | Define custom memory regions and generate a Markdown report with per-region section usage, free space, and top symbols by size. Import/export regions as JSON. |
 | **Diff** | Side-by-side ELF build comparison |
+
+### Report
+
+1. Upload or analyze an ELF binary (`elfyzer analyze firmware.elf`)
+2. Click **Report** in the sidebar
+3. Add memory regions by filling in Name (e.g. `SRAM0`), Start Address (e.g. `0x20000000`), and Size (e.g. `128K`)
+4. Click **Generate Report** - a Markdown preview appears with an overview table and per-region breakdowns
+5. Click **Download .md** to save the report as a file
+6. Use **Import** / **Export** to load or save region definitions as `.json` files
+
+<div align="center">
+  <img src="src/elfyzer/static/assets/elfyzer_report.png" alt="elfyzer report" width="800"/>
+</div>
 
 ---
 
@@ -127,6 +143,7 @@ src/
     │       ├── state.js    # Global state, view switching, error boundary
     │       ├── views.js    # All render functions (overview, symbols, sections, etc.)
     │       ├── diff.js     # Diff upload, rendering, filtering
+    │       ├── report.js   # Memory Profile Report with markdown generation
     │       ├── chart.js    # ECharts treemap/sunburst
     │       ├── echarts.min.js  # Vendored ECharts (replaces CDN)
     │       ├── main.js     # DOM event delegation
