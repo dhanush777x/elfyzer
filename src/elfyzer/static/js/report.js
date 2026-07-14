@@ -36,6 +36,16 @@
       .replace(/\r?\n/g, ' ');
   }
 
+  function csvEscape(str) {
+    if (str == null) return '';
+    str = String(str);
+    if (/^0x/i.test(str)) return '="' + str + '"';
+    if (str.indexOf(',') >= 0 || str.indexOf('"') >= 0 || str.indexOf('\n') >= 0 || str.indexOf('\r') >= 0) {
+      return '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+  }
+
   function byId(id) {
     return document.getElementById(id);
   }
@@ -440,7 +450,10 @@
         '<div class="card">' +
           '<div class="card-header">' +
             '<span class="card-title">Report Preview</span>' +
-            '<button class="btn" id="download-md-btn">Download .md</button>' +
+            '<div style="display:flex;gap:6px;align-items:center;">' +
+              '<button class="btn" id="download-md-btn">Download .md</button>' +
+              '<button class="btn" id="download-csv-btn">Download .csv</button>' +
+            '</div>' +
           '</div>' +
           '<div class="card-body" style="padding:0;">' +
             '<pre id="report-markdown" style="margin:0;padding:16px;overflow:auto;max-height:600px;font-family:var(--font-mono);font-size:12px;line-height:1.6;color:var(--text);background:var(--inset-bg);border-radius:0 0 var(--radius-lg) var(--radius-lg);white-space:pre-wrap;word-break:break-word;"></pre>' +
@@ -575,8 +588,8 @@
     } else {
       lines.push('### Sections');
       lines.push('');
-      lines.push('| Section | VMA | Size | % of Region | Note |');
-      lines.push('|---------|-----|------|-------------|------|');
+      lines.push('| Section | VMA | Size | % of Region |');
+      lines.push('|---------|-----|------|-------------|');
 
       var all = rr.usage.sections.map(function (s) { return { s: s, clipped: false }; })
         .concat(rr.usage.clippedSections.map(function (s) { return { s: s, clipped: true }; }));
@@ -589,8 +602,7 @@
           '| ' + escMarkdown(s.name || '(unnamed)') +
           ' | ' + fmtHex(s.vma) +
           ' | ' + fmtReportBytes(s.actual_size) +
-          ' | ' + secPct + '%' +
-          ' | ' + (entry.clipped ? 'crosses boundary' : '') + ' |'
+          ' | ' + secPct + '% |'
         );
       });
       lines.push('');
@@ -619,6 +631,80 @@
     }
 
     return lines;
+  }
+
+  function buildCsvReport(title, filename, regionReports, topN, symbols) {
+    var lines = [];
+
+    lines.push(csvEscape(title));
+    if (filename) lines.push('"File:",' + csvEscape(filename));
+    lines.push('"Generated:",' + csvEscape(fmtTimestamp(new Date())));
+    lines.push('');
+
+    lines.push('"Region","Start","End","Size","Used","Free","Usage"');
+    regionReports.forEach(function (rr) {
+      var r = rr.region;
+      var pct = r.size > 0 ? ((rr.usage.used / r.size) * 100).toFixed(1) : '0.0';
+      lines.push(
+        csvEscape(r.name) + ',' +
+        csvEscape(fmtHex(r.start)) + ',' +
+        csvEscape(fmtHex(r.end)) + ',' +
+        csvEscape(fmtReportBytes(r.size)) + ',' +
+        csvEscape(fmtReportBytes(rr.usage.used)) + ',' +
+        csvEscape(fmtReportBytes(rr.usage.free)) + ',' +
+        csvEscape(pct + '%')
+      );
+    });
+    lines.push('');
+
+    regionReports.forEach(function (rr) {
+      var r = rr.region;
+      lines.push(csvEscape(r.name + ' (' + fmtHex(r.start) + ' - ' + fmtHex(r.end) + ')'));
+      lines.push('');
+
+      var all = rr.usage.sections.map(function (s) { return { s: s, clipped: false }; })
+        .concat(rr.usage.clippedSections.map(function (s) { return { s: s, clipped: true }; }));
+      all.sort(function (a, b) { return b.s.actual_size - a.s.actual_size; });
+
+      if (all.length === 0) {
+        lines.push('"No allocated sections in this region."');
+      } else {
+        lines.push('"Section","VMA","Size","% of Region"');
+        all.forEach(function (entry) {
+          var s = entry.s;
+          var secPct = r.size > 0 ? ((s.actual_size / r.size) * 100).toFixed(1) : '0.0';
+          lines.push(
+            csvEscape(s.name || '(unnamed)') + ',' +
+            csvEscape(fmtHex(s.vma)) + ',' +
+            csvEscape(fmtReportBytes(s.actual_size)) + ',' +
+            csvEscape(secPct + '%')
+          );
+        });
+      }
+      lines.push('');
+
+      var regionSymbols = (symbols || []).filter(function (s) {
+        return s && s.size > 0 && s.address !== undefined && s.address !== null &&
+          s.address >= r.start && s.address < r.end;
+      }).sort(function (a, b) { return b.size - a.size; });
+      var topSymbols = regionSymbols.slice(0, topN);
+
+      if (topSymbols.length > 0) {
+        lines.push(csvEscape('Top ' + Math.min(topN, regionSymbols.length) + ' Symbols by Size in ' + r.name));
+        lines.push('"Symbol","Size","Section","Address"');
+        topSymbols.forEach(function (sym) {
+          lines.push(
+            csvEscape(sym.name || '(unnamed)') + ',' +
+            csvEscape(fmtReportBytes(sym.size)) + ',' +
+            csvEscape(sym.section || '-') + ',' +
+            csvEscape(fmtHex(sym.address))
+          );
+        });
+        lines.push('');
+      }
+    });
+
+    return '\uFEFF' + lines.join('\n');
   }
 
   function generateReport() {
@@ -674,6 +760,14 @@
     if (dlBtn) {
       dlBtn.onclick = function () {
         downloadTextFile(safeFilename(title, 'md'), md, 'text/markdown');
+      };
+    }
+
+    var csvDlBtn = byId('download-csv-btn');
+    if (csvDlBtn) {
+      csvDlBtn.onclick = function () {
+        var csv = buildCsvReport(title, filename, regionReports, topN, symbols);
+        downloadTextFile(safeFilename(title, 'csv'), csv, 'text/csv');
       };
     }
   }

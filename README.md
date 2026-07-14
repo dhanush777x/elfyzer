@@ -102,7 +102,7 @@ The dashboard opens at `http://127.0.0.1:8000`.
 | **Source Files** | DWARF-based source-level symbol attribution |
 | **Object Files** | Object file attribution derived from source paths |
 | **Segments** | Program header table with expandable detail |
-| **Report** | Define custom memory regions and generate a Markdown report with per-region section usage, free space, and top symbols by size. Import/export regions as JSON. |
+| **Report** | Define custom memory regions and generate a Markdown or CSV report with per-region section usage, free space, and top symbols by size. Import/export regions as JSON. |
 | **Diff** | Side-by-side ELF build comparison |
 
 ### Report
@@ -111,7 +111,7 @@ The dashboard opens at `http://127.0.0.1:8000`.
 2. Click **Report** in the sidebar
 3. Add memory regions by filling in Name (e.g. `SRAM0`), Start Address (e.g. `0x20000000`), and Size (e.g. `128K`)
 4. Click **Generate Report** - a Markdown preview appears with an overview table and per-region breakdowns
-5. Click **Download .md** to save the report as a file
+5. Click **Download .md** or **Download .csv** to save the report
 6. Use **Import** / **Export** to load or save region definitions as `.json` files
 
 <div align="center">
