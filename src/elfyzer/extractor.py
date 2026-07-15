@@ -146,23 +146,18 @@ class ElfExtractor:
 
         log.info("  DWARF info present - extracting source attribution")
         dwarf = self._elf.get_dwarf_info()
-        total = len(symbols)
 
-        die_matched = self._attribution_die_walk(dwarf, symbols)
-        log.info(f"  Phase 1 - DIE exact match: {die_matched}/{total}")
+        self._attribution_die_walk(dwarf, symbols)
+        self._attribution_debug_line(dwarf, symbols)
+        self._attribution_cu_ranges(dwarf, symbols)
 
-        line_matched = self._attribution_debug_line(dwarf, symbols)
-        log.info(f"  Phase 2 - .debug_line:      {line_matched} additional")
+    def _attribution_die_walk(self, dwarf, symbols) -> None:
+        remaining: dict[int, SymbolRecord] = {}
+        for sym in symbols:
+            key = sym.address & ~1
+            if key not in remaining:
+                remaining[key] = sym
 
-        cu_matched = self._attribution_cu_ranges(dwarf, symbols)
-        log.info(f"  Phase 3 - CU ranges:        {cu_matched} additional")
-
-        unknown = sum(1 for s in symbols if s.attribution == "unknown")
-        if unknown:
-            log.info(f"  Total unattributed: {unknown}/{total}")
-
-    def _attribution_die_walk(self, dwarf, symbols) -> int:
-        addr_to_src: dict[int, tuple[str, str]] = {}
         endian = '<' if self._elf.little_endian else '>'
         addr_size = self._elf.elfclass // 8
 
@@ -170,6 +165,9 @@ class ElfExtractor:
             try:
                 cu_die = cu.get_top_DIE()
             except Exception:
+                continue
+
+            if 'DW_AT_low_pc' not in cu_die.attributes:
                 continue
 
             cu_name, cu_compdir = "", ""
@@ -192,8 +190,7 @@ class ElfExtractor:
             try:
                 for die in cu.iter_DIEs():
                     if die.tag not in ('DW_TAG_variable',
-                                       'DW_TAG_subprogram',
-                                       'DW_TAG_formal_parameter'):
+                                       'DW_TAG_subprogram'):
                         continue
                     try:
                         addr = None
@@ -204,23 +201,16 @@ class ElfExtractor:
                             addr = self._parse_location_addr(
                                 loc_val, endian, addr_size)
 
-                        if addr is not None and addr not in addr_to_src:
-                            addr_to_src[addr] = (full_cu, cu_name)
+                        if addr is not None:
+                            sym = remaining.pop(addr, None)
+                            if sym is not None:
+                                sym.source_file = full_cu
+                                sym.compile_unit = cu_name
+                                sym.attribution = "exact"
                     except Exception:
                         continue
             except Exception:
                 continue
-
-        matched = 0
-        for sym in symbols:
-            src = addr_to_src.get(sym.address)
-            if src is None:
-                src = addr_to_src.get(sym.address & ~1)
-            if src is not None:
-                sym.source_file, sym.compile_unit = src
-                sym.attribution = "exact"
-                matched += 1
-        return matched
 
     @staticmethod
     def _parse_location_addr(loc_val, endian, addr_size):
@@ -237,19 +227,44 @@ class ElfExtractor:
             fmt = '<I' if endian == '<' else '>I'
         return struct.unpack(fmt, raw)[0]
 
-    def _attribution_debug_line(self, dwarf, symbols) -> int:
+    @staticmethod
+    def _get_cu_range(cu):
+        try:
+            cu_die = cu.get_top_DIE()
+            lo_attr = cu_die.attributes.get('DW_AT_low_pc')
+            hi_attr = cu_die.attributes.get('DW_AT_high_pc')
+            if lo_attr is None or hi_attr is None:
+                return None
+            lo = lo_attr.value
+            hi = hi_attr.value
+            if hasattr(hi_attr, 'form') and hi_attr.form != 'DW_FORM_addr':
+                hi = lo + hi
+
+            cu_name_attr = cu_die.attributes.get('DW_AT_name')
+            label = ""
+            if cu_name_attr is not None:
+                v = cu_name_attr.value
+                label = v.decode(
+                    'utf-8', errors='replace') if isinstance(v, bytes) else str(v)
+            return (lo, hi, label)
+        except Exception:
+            return None
+
+    def _attribution_debug_line(self, dwarf, symbols) -> None:
         unmatched = [s for s in symbols if s.attribution == "unknown"]
         if not unmatched:
-            return 0
+            return
 
-        entries = self._collect_line_entries(dwarf)
+        min_addr = min(s.address & ~1 for s in unmatched)
+        max_addr = max(s.address & ~1 for s in unmatched)
+
+        entries = self._collect_line_entries(dwarf, (min_addr, max_addr))
         if not entries:
-            return 0
+            return
 
         addrs = [e[0] for e in entries]
         files = [e[1] for e in entries]
 
-        matched = 0
         for sym in unmatched:
             # ARM Thumb: sym address has LSB set, line prog addresses do not
             addr = sym.address & ~1
@@ -258,13 +273,20 @@ class ElfExtractor:
                 sym.source_file = files[idx]
                 sym.compile_unit = ""
                 sym.attribution = "inferred"
-                matched += 1
-        return matched
 
-    def _collect_line_entries(self, dwarf) -> list[tuple[int, str]]:
-        entries: list[tuple[int, str]] = []
+    def _collect_line_entries(self, dwarf, symbol_bounds=None) -> list[tuple[int, str]]:
+        entry_map: dict[int, str] = {}
 
         for cu in dwarf.iter_CUs():
+            if symbol_bounds:
+                cr = self._get_cu_range(cu)
+                if cr is None:
+                    continue
+                lo, hi, _ = cr
+                min_addr, max_addr = symbol_bounds
+                if hi <= min_addr or lo > max_addr:
+                    continue
+
             lineprog = None
             try:
                 lineprog = dwarf.line_program_for_CU(cu)
@@ -311,52 +333,37 @@ class ElfExtractor:
                     if addr is None:
                         continue
                     fidx = entry.state.file - 1
-                    if 0 <= fidx < len(file_table):
-                        entries.append((addr, file_table[fidx]))
+                    if 0 <= fidx < len(file_table) and addr not in entry_map:
+                        entry_map[addr] = file_table[fidx]
             except Exception:
                 continue
 
-        if entries:
-            entries.sort(key=lambda x: x[0])
-            deduped = [entries[0]]
-            for a, f in entries[1:]:
-                if a != deduped[-1][0]:
-                    deduped.append((a, f))
-            return deduped
-        return entries
+        if entry_map:
+            return sorted(entry_map.items(), key=lambda x: x[0])
+        return []
 
-    def _attribution_cu_ranges(self, dwarf, symbols) -> int:
+    def _attribution_cu_ranges(self, dwarf, symbols) -> None:
         cu_ranges = []
         for cu in dwarf.iter_CUs():
-            try:
-                cu_die = cu.get_top_DIE()
-                lo_attr = cu_die.attributes.get('DW_AT_low_pc')
-                hi_attr = cu_die.attributes.get('DW_AT_high_pc')
-                if lo_attr is None or hi_attr is None:
-                    continue
-                lo = lo_attr.value
-                hi = hi_attr.value
-                if hasattr(hi_attr, 'form') and hi_attr.form != 'DW_FORM_addr':
-                    hi = lo + hi
-                cu_name = cu_die.attributes.get('DW_AT_name')
-                label = cu_name.value.decode(
-                    'utf-8', errors='replace') if cu_name else ""
-                if isinstance(label, bytes):
-                    label = label.decode('utf-8', errors='replace')
-                cu_ranges.append((lo, hi, label))
-            except Exception:
+            cr = self._get_cu_range(cu)
+            if cr is None:
                 continue
+            cu_ranges.append(cr)
 
-        matched = 0
+        if not cu_ranges:
+            return
+
+        cu_ranges.sort(key=lambda x: x[0])
+        starts = [r[0] for r in cu_ranges]
+        ends = [r[1] for r in cu_ranges]
+        labels = [r[2] for r in cu_ranges]
+
         for sym in symbols:
             if sym.attribution != "unknown":
                 continue
             addr = sym.address & ~1
-            for lo, hi, label in cu_ranges:
-                if lo <= addr < hi:
-                    sym.source_file = label
-                    sym.compile_unit = label
-                    sym.attribution = "inferred"
-                    matched += 1
-                    break
-        return matched
+            idx = bisect.bisect_right(starts, addr) - 1
+            if idx >= 0 and addr < ends[idx]:
+                sym.source_file = labels[idx]
+                sym.compile_unit = labels[idx]
+                sym.attribution = "inferred"
