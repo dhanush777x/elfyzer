@@ -33,7 +33,7 @@ HOST = "127.0.0.1"
 PORT = 8000
 URL = f"http://{HOST}:{PORT}"
 MAX_UPLOAD_SIZE = 500 * 1024 * 1024
-VERSION = "0.3.2"
+VERSION = "0.3.5"
 
 BANNER = f"elfyzer v{VERSION} - Firmware Memory Analysis Platform\nDashboard: {
     URL}"
